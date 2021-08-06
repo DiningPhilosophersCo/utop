@@ -1253,6 +1253,16 @@ Special keys for utop:
               (setq utop--complete-k k)
               (call-interactively #'utop-complete)))))))
 
+(defun utop-use-this-file ()
+  "Load the current file in the toplevel with #use"
+  (interactive)
+  (let ((buf (get-buffer utop-buffer-name)))
+    (unless buf
+      (setq buf (save-excursion (utop))))
+    (with-current-buffer buf
+      (when (eq utop-state 'done) (utop-restart)))
+      (utop-eval-string (format "#use \"%s\"" (buffer-file-name)))))
+
 (provide 'utop-minor-mode)
 (provide 'utop)
 
