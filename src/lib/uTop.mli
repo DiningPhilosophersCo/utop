@@ -341,11 +341,21 @@ val split_words : string -> string list
  (** {6 compiler-libs reexports} *)
 
 val get_load_path : unit -> string list
+
+#if OCAML_VERSION >= (5, 2, 0)
+val set_load_path : visible:string list -> hidden:string list -> unit
+  (** [get_load_path] and [set_load_path] manage the include directories.
+
+
+      The internal variable contains the list of directories added by findlib-required packages
+      and [#directory] directives. *)
+#else
 val set_load_path : string list -> unit
   (** [get_load_path] and [set_load_path] manage the include directories.
 
       The internal variable contains the list of directories added by findlib-required packages
       and [#directory] directives. *)
+#endif
 
 (**/**)
 

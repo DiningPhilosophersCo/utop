@@ -379,6 +379,14 @@ let get_cached var f =
 
 (* List all visible modules. *)
 let visible_modules () =
+  let visible_paths =
+#if OCAML_VERSION >= (5, 2, 0)
+    let Load_path.{ visible; hidden: _ } = Load_path.get_paths () in
+    visible
+#else
+    Load_path.get_paths ()
+#endif
+  in
   get_cached visible_modules
     (fun () ->
       List.fold_left
@@ -394,7 +402,7 @@ let visible_modules () =
               (Sys.readdir (if dir = "" then Filename.current_dir_name else dir))
           with Sys_error _ ->
             acc)
-        String_set.empty @@ Load_path.get_paths ()
+        String_set.empty @@ visible_paths
     )
 
 let field_name { ld_id = id } = Ident.name id
@@ -406,7 +414,7 @@ let add_fields_of_type decl acc =
         acc
     | Type_record (fields, _) ->
         List.fold_left (fun acc field -> add (field_name field) acc) acc fields
-    | Type_abstract ->
+    | Type_abstract _Definition ->
         acc
     | Type_open ->
         acc
@@ -421,7 +429,7 @@ let add_names_of_type decl acc =
         List.fold_left (fun acc cstr -> add (constructor_name cstr) acc) acc constructors
     | Type_record (fields, _) ->
         List.fold_left (fun acc field -> add (field_name field) acc) acc fields
-    | Type_abstract ->
+    | Type_abstract _Definition ->
         acc
     | Type_open ->
         acc
@@ -839,7 +847,12 @@ let complete ~phrase_terminator ~input =
               (fun acc d -> add_files filter acc (Filename.concat d dir))
               String_map.empty
               (Filename.current_dir_name ::
+#if OCAML_VERSION >= (5, 2, 0)
+                let Load_path.{ visible; hidden } = Load_path.get_paths () in
+                (visible @ hidden)
+#else
                 (Load_path.get_paths ())
+#endif
               )
 
           else
@@ -899,7 +912,12 @@ let complete ~phrase_terminator ~input =
               (fun acc d -> add_files filter acc (Filename.concat d dir))
               String_map.empty
               (Filename.current_dir_name ::
+#if OCAML_VERSION >= (5, 2, 0)
+                let Load_path.{ visible; hidden } = Load_path.get_paths () in
+                (visible @ hidden)
+#else
                 (Load_path.get_paths ())
+#endif
               )
           else
             add_files filter String_map.empty (Filename.dirname file)

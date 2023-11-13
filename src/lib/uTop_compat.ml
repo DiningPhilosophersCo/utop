@@ -19,11 +19,16 @@ let toploop_all_directive_names () =
   Hashtbl.fold (fun dir _ acc -> dir::acc) Toploop.directive_table []
 #endif
 
-let set_load_path path =
-#if OCAML_VERSION >= (5, 0, 0)
-  Load_path.init path ~auto_include:Load_path.no_auto_include
+#if OCAML_VERSION >= (5, 2, 0)
+let set_load_path ~visible ~hidden =
+  Load_path.init ~auto_include:Load_path.no_auto_include ~visible ~hidden
 #else
-  Load_path.init path
+  let set_load_path path =
+  #if OCAML_VERSION >= (5, 0, 0)
+    Load_path.init path ~auto_include:Load_path.no_auto_include
+  #else
+    Load_path.init path
+  #endif
 #endif
 
 let toploop_use_silently fmt name =

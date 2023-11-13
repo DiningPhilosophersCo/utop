@@ -290,7 +290,21 @@ let parse_default parse str eos_is_error =
                  Printf.sprintf "Error: broken invariant in parsetree: %s" s)
       | Syntaxerr.Invalid_package_type (loc, s) ->
           Error ([mkloc loc],
+#if OCAML_VERSION >= (5, 2, 0)
+                 let module Style = Misc.Style in
+                 let s = match s with
+                 | Syntaxerr.Parameterized_types -> "parametrized types are not supported"
+                 | Constrained_types -> "constrained types are not supported"
+                 | Private_types -> "private types are not supported"
+                 | Not_with_type ->
+                    Format.asprintf "only %a constraints are supported" Style.inline_code "with type t ="
+                 | Neither_identifier_nor_with_type ->
+                    Format.asprintf "only module type identifier and %a constraints are supported" Style.inline_code "with type"
+                 in
                  Printf.sprintf "Invalid package type: %s" s)
+#else
+                 Printf.sprintf "Invalid package type: %s" s)
+#endif
 #if OCAML_VERSION >= (5, 0, 0)
       | Syntaxerr.Removed_string_set loc ->
           Error ([mkloc loc],
@@ -358,11 +372,28 @@ let check_phrase phrase =
           let open Ast_helper in
           with_default_loc loc
             (fun () ->
+#if OCAML_VERSION >= (5, 2, 0)
+              let function_params = [ { pparam_loc = loc; pparam_desc = Pparam_val (Nolabel, None, (Pat.construct unit None)) } ] in
+              Str.eval
+                (Exp.function_
+                  ~loc
+                  ~attrs:[] 
+                   function_params
+                   None
+                   (Pfunction_body (Exp.letmodule
+                                     ~attrs:[]
+                                     ~loc
+                                     (with_loc loc (Some "_"))
+                                     (Mod.structure (item :: items))
+                                     (Exp.construct unit None))))
+#else
                Str.eval
                  (Exp.fun_ Nolabel None (Pat.construct unit None)
                    (Exp.letmodule (with_loc loc (Some "_"))
                       (Mod.structure (item :: items))
-                      (Exp.construct unit None))))
+                      (Exp.construct unit None)))
+#endif
+            )
         in
         let check_phrase = Ptop_def [top_def] in
         try
@@ -828,7 +859,14 @@ let () =
    | Compiler-libs re-exports                                        |
    +-----------------------------------------------------------------+ *)
 
-let get_load_path () = Load_path.get_paths ()
+let get_load_path () =
+#if OCAML_VERSION >= (5, 2, 0)
+  let open Load_path in
+  let { visible; hidden } = get_paths () in
+  visible @ hidden    
+#else
+  Load_path.get_paths ()
+#endif
 let set_load_path = UTop_compat.set_load_path
 
 module Private = struct
